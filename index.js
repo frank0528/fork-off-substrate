@@ -144,7 +144,10 @@ async function main() {
   forkedSpec.genesis.raw.top['0x3a636f6465'] = '0x' + fs.readFileSync(hexPath, 'utf8').trim();
 
   // To prevent the validator set from changing mid-test, set Staking.ForceEra to ForceNone ('0x02')
-  forkedSpec.genesis.raw.top['0x5f3e4907f716ac89b6347d15ececedcaf7dad0317324aecae8744b87fc95f2f3'] = '0x02';
+  // forkedSpec.genesis.raw.top['0x5f3e4907f716ac89b6347d15ececedcaf7dad0317324aecae8744b87fc95f2f3'] = '0x02';
+
+  // Set babe epochConfig
+  forkedSpec.genesis.raw.top['0x1cb6f36e027abb2091cfb5110ab5087fdc6b171b77304263c292cc3ea5ed31ef'] = '0x0100000000000000040000000000000001';
 
   if (alice !== '') {
     // Set sudo key to //Alice
