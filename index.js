@@ -25,6 +25,7 @@ const totalChunks = Math.pow(256, chunksLevel);
 const alice = process.env.ALICE || ''
 const originalChain = process.env.ORIG_CHAIN || '';
 const forkChain = process.env.FORK_CHAIN || '';
+const pageSize = process.env.PAGE_SIZE || 50;
 
 let chunksFetched = 0;
 let separator = false;
@@ -102,7 +103,7 @@ async function main() {
   const modules = metadata.asLatest.pallets;
   modules.forEach((module) => {
     if (module.storage) {
-      if (!skippedModulesPrefix.includes(module.name)) {
+      if (!skippedModulesPrefix.includes(module.name.toString())) {
         prefixes.push(xxhashAsHex(module.name, 128));
       }
     }
@@ -160,11 +161,27 @@ main();
 
 async function fetchChunks(prefix, levelsRemaining, stream, at) {
   if (levelsRemaining <= 0) {
-    const pairs = await provider.send('state_getPairs', [prefix, at]);
-    if (pairs.length > 0) {
-      separator ? stream.write(",") : separator = true;
-      stream.write(JSON.stringify(pairs).slice(1, -1));
+    let startKey = null;
+    while (true) {
+      const keys = await provider.send('state_getKeysPaged', [prefix, pageSize, startKey, at]);
+      if (keys.length > 0) {
+        let pairs = [];
+        await Promise.all(keys.map(async (key) => {
+          const value = await provider.send('state_getStorage', [key, at]);
+          pairs.push([key, value]);
+        }));
+
+        separator ? stream.write(",") : separator = true;
+        stream.write(JSON.stringify(pairs).slice(1, -1));
+
+        startKey = keys[keys.length - 1];
+      }
+
+      if (keys.length < pageSize) {
+        break;
+      }
     }
+
     progressBar.update(++chunksFetched);
     return;
   }
